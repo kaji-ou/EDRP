@@ -25,7 +25,7 @@
           - Ex list(list(taple(start_node, goal_node, deadline)))
     - Second is to create tasks for each step
 
-- list of what tasks were assigned
+- list of what tasks were assigned to which agents
   - an array or list whose size is the same as the number of drones and whose elements are taple(start_node, goal_node, deadline)
 - GUI of task list
 
