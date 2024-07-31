@@ -13,7 +13,9 @@
   - a queue or list whose elements are taple(start_node, goal_node, deadline)
 - task creator
   - density of tasks
+    - Task creation is determined by probability, and varying the probability changes the density of the tasks
   - influence hours
+    - Probably it's better to implement later
   - random
     - The addition of tasks is not necessarily limited to one per step
     - First is to create a whole task list at the start of the episode
