@@ -9,6 +9,7 @@
 - GUI of task list
 
 # Implementation Ideas
+## by kaji
 - task list
   - a queue or list whose elements are taple(start_node, goal_node, deadline)
 - task creator
