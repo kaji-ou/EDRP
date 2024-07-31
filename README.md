@@ -19,6 +19,7 @@
     - Probably it's better to implement later
   - random
     - The addition of tasks is not necessarily limited to one per step
+    - two ideas to implement
     - First is to create a whole task list at the start of the episode
       - at the beginning of the episode, create a list of tasks that the agent can observe and a list of tasks that should be assigned in the future
       - The latter list has information about when and what tasks are to be added to the former list
