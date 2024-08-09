@@ -151,7 +151,7 @@ class MapMake():
 		nx.draw_networkx(self.G, with_labels = True,pos=self.pos,alpha=0.2, node_size=170, node_color='lightblue')
       
 
-	def plot_map_dynamic(self, delay ,obs_old, obs, goal_array, agent_num, joint_action_old, reach_account, step, episode):# a must be a angle !!!list!!!
+	def plot_map_dynamic(self, delay ,obs_old, obs, goal_array, agent_num, joint_action_old, reach_account, step, episode, tasklist, assigned_task):# a must be a angle !!!list!!!
 		self.agent_num = agent_num
 		
 		#for i in range(self.goods):
@@ -204,7 +204,18 @@ class MapMake():
 		self.ax3.text(-5, 3, "step_n:"+str(step), fontsize=10)
 		self.ax3.text(-5, 6, "episode_n:"+str(episode), fontsize=10)
 
-		
+		for i in range(len(tasklist)):
+			if i==0:
+				self.ax3.text(-13, 53, "task to assign", fontsize=10)
+			self.ax3.text(-13, 50-3*i, str(tasklist[i]), fontsize=10)
+
+		pos = 0
+		for i in range(agent_num):
+			if i==0:
+				self.ax3.text(50, 53, "assigned task", fontsize=10)
+			if len(assigned_task[i])>0:
+				self.ax3.text(50, 50-3*pos, str(assigned_task[i]), fontsize=10)
+				pos=pos+1
 
 		self.draw_weighted_graph(self.G, self.pos)
 		plt.grid() #グリッド
@@ -260,6 +271,31 @@ class MapMake():
 					print('!!!collision!!! with agent',i,j)
 		
 		return collision_flag
+
+	# create one task
+	def create_task(self, timelimit):
+		G_nodes_copy = copy.deepcopy(list(self.G.nodes()))
+		start_node = np.random.choice(G_nodes_copy)
+		G_nodes_copy.remove(start_node)
+		goal_node = np.random.choice(G_nodes_copy)
+		deadline = timelimit+1 #later
+		return [start_node, goal_node, deadline]
+
+	# create all tasklist
+	def create_tasklist(self, timelimit, agent_num, task_density):
+		tasklist=[]
+		for i in range(timelimit):
+			tasklist_by_step=[]
+			random_num = 1
+			for i in range(random_num): 	#random_num is a number greater than or equal to 0 determined
+											#with probability by agent_num and task_density
+				tasklist_by_step.append(self.create_task(timelimit))
+			tasklist.append(tasklist_by_step)
+			#Add one task per step as an initial implementation
+
+		print(tasklist)
+		return tasklist
+
 """
 if __name__ == '__main__':
     Map=MapMake()

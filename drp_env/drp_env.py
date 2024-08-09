@@ -7,6 +7,7 @@ import os
 
 from drp_env.state_repre import REGISTRY
 from drp_env.EE_map import MapMake
+from simple_manager import TaskManager
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ''))
 
@@ -72,7 +73,10 @@ class DrpEnv(gym.Env):
 
 		self.log = {}
 
-		
+		# flag for tasklist
+		self.is_tasklist = True
+		self.current_tasklist=[]
+		self.assigned_tasks=[]
 
 	def get_obs(self):
 		return self.obs
@@ -101,6 +105,15 @@ class DrpEnv(gym.Env):
 			self.ee_env.random_goal()
 			self.goal_array = self.ee_env.goal_array
 		print("self.start_ori_array after", self.start_ori_array)
+
+		#initialize task list
+		if self.is_tasklist:
+			self.goal_array = self.start_ori_array
+			self.current_tasklist=[]
+			self.assigned_tasks=[] #self.assigned_tasks[i] is a task assigned to agent i
+			for i in range(self.agent_num):
+				self.assigned_tasks.append([])
+			self.alltasks = self.ee_env.create_tasklist(self.time_limit, self.agent_num, 1)
 
 		#initialize obs
 		self.obs = tuple(np.array([self.pos[self.start_ori_array[i]][0], self.pos[self.start_ori_array[i]][1], self.start_ori_array[i], self.goal_array[i]]) for i in range(self.agent_num))
@@ -224,7 +237,7 @@ class DrpEnv(gym.Env):
 			else: # default -> self.collision == "terminated"
 				self.terminated = [True for _ in range(self.agent_num)]
 			info["collision"] = True
-			obs = self.obs_manager.calc_obs()
+			#obs = self.obs_manager.calc_obs()
 			ri_array = [collision_reward for _ in range(self.agent_num)]
 			
 			# return obs, [collision_reward for _ in range(self.agent_num)], self.terminated, info 
@@ -233,7 +246,7 @@ class DrpEnv(gym.Env):
 		else: #non collision
 			self.obs = tuple([np.array(i) for i in self.obs_prepare])
 			self.obs_onehot = copy.deepcopy(self.obs_onehot_prepare)
-			self.current_start = copy.deepcopy(self.current_start_prepare)   
+			self.current_start = copy.deepcopy(self.current_start_prepare) 
 			self.current_goal = copy.deepcopy(self.current_goal_prepare)
 
 			team_reward = 0
@@ -252,7 +265,50 @@ class DrpEnv(gym.Env):
 			else:
 				pass
 
-			obs = self.obs_manager.calc_obs()
+			#obs = self.obs_manager.calc_obs()
+
+		# process about tasklist
+		if self.is_tasklist:
+			# add tasks
+			for i in range(len(self.alltasks[self.step_account])):
+				new_task = self.alltasks[self.step_account-1][i]
+				self.current_tasklist.append(new_task)
+			# exclude the task from the list if it has been completed
+			for i in range(self.agent_num):
+				pos_agenti = [self.obs[i][0],self.obs[i][1]]
+				if len(self.assigned_tasks[i])>0:
+					if str(pos_agenti)==str(self.pos[self.goal_array[i]]):
+						if self.goal_array[i] == self.assigned_tasks[i][1]:
+							self.assigned_tasks[i] = []
+						
+			self.current_tasklist, self.assigned_tasks = TaskManager.assign_task(self.agent_num, self.current_tasklist, self.assigned_tasks)
+
+			# update agent's start and goal
+			for i in range(self.agent_num):
+				pos_agenti = [self.obs[i][0],self.obs[i][1]]
+				if len(self.assigned_tasks[i])>0:
+					if str(pos_agenti)==str(self.pos[self.goal_array[i]]):
+						if self.goal_array[i]==self.assigned_tasks[i][0]:
+							self.start_ori_array[i] = self.goal_array[i]
+							self.goal_array[i] = self.assigned_tasks[i][1]
+						else:
+							self.start_ori_array[i] = self.goal_array[i]
+							self.goal_array[i] = self.assigned_tasks[i][0]
+
+						self.obs_prepare[i] = [self.obs[i][0], self.obs[i][1], self.start_ori_array[i], self.goal_array[i]]
+						self.obs = tuple([np.array(i) for i in self.obs_prepare])
+						self.obs_onehot[i] = np.zeros((1, len(list(self.G.nodes()))*2))
+						self.obs_onehot[i][int(self.start_ori_array[i])] = 1
+						self.obs_onehot[i][int(self.goal_array[i])+len(list(self.G.nodes()))] = 1
+
+			#print(self.alltasks)
+			print(self.current_tasklist)
+			print(self.assigned_tasks)
+			print(self.start_ori_array)
+			print(self.goal_array)
+			print(self.obs)
+
+		obs = self.obs_manager.calc_obs()
 
 		# Check whether time is over
 		if self.step_account >= self.time_limit:
@@ -291,23 +347,40 @@ class DrpEnv(gym.Env):
 		pre_pos_agenti = [self.obs_current_chache[i][0],self.obs_current_chache[i][1]]
 		pos_agenti = [self.obs[i][0],self.obs[i][1]]
 
-		if str(pos_agenti)==str(self.pos[self.goal_array[i]]): # at goal
-			if pre_pos_agenti!=pos_agenti : #first time to reach goal 
-				r_i = self.r_goal
-				self.reach_account += 1
-				self.terminated[i] = True
-			else: # stop at goal
-				r_i = 0   
-				# self.distance_from_start[i] -= self.speed
-		
-		else: #at a general node 
-			if pre_pos_agenti==pos_agenti: # stop at a general node 
-				r_i = self.r_wait*self.speed
-			else: # just move 
-				r_i = self.r_move*self.speed
+		if self.is_tasklist: #ここから
+			if self.start_ori_array[i] == self.goal_array[i]:
+				r_i = 0
+			else:
+				if str(pos_agenti)==str(self.pos[self.goal_array[i]]): # at goal				
+					if len(self.assigned_tasks[i])>0 : #first time to reach goal 
+						r_i = self.r_goal
+						self.reach_account += 1
+					else: # stop at goal
+						r_i = 0   
+						# self.distance_from_start[i] -= self.speed
 			
-		return r_i
+				else: #at a general node 
+					if pre_pos_agenti==pos_agenti: # stop at a general node 
+						r_i = self.r_wait*self.speed
+					else: # just move 
+						r_i = self.r_move*self.speed
 
+		else:
+			if str(pos_agenti)==str(self.pos[self.goal_array[i]]): # at goal				
+				if pre_pos_agenti!=pos_agenti : #first time to reach goal 
+					r_i = self.r_goal
+					self.reach_account += 1
+					self.terminated[i] = True
+				else: # stop at goal
+					r_i = 0   
+					# self.distance_from_start[i] -= self.speed
+			
+			else: #at a general node 
+				if pre_pos_agenti==pos_agenti: # stop at a general node 
+					r_i = self.r_wait*self.speed
+				else: # just move 
+					r_i = self.r_move*self.speed
+		return r_i
 
 	def render(self, mode='human'):
 		self.ee_env.plot_map_dynamic(
@@ -317,13 +390,15 @@ class DrpEnv(gym.Env):
 			self.current_goal,
 			self.reach_account,
 			self.step_account,
-			self.episode_account
+			self.episode_account,
+			self.current_tasklist,
+			self.assigned_tasks,
 		) # a must be a angle !!!list!!!
+		
 
 	def close(self):
 		print('Environment CLOSE')
 		return None
-
     
 	def get_pos_list(self):
 		pos_list = []
