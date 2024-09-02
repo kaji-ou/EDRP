@@ -7,7 +7,9 @@ And then, when you input a set of agent actions in the terminal, the agent moves
 - Example of a set of actions to input: 2 5 4
   - There are three agents
 
-
+# Operation may change between mac and windows
+If you are using mac, leave it as it is.
+If you are using windows, delete `matplotlib.use('tkagg')` from gui_task.py.
 
 
 
