@@ -204,6 +204,7 @@ class MapMake():
 		self.ax3.text(-5, 3, "step_n:"+str(step), fontsize=10)
 		self.ax3.text(-5, 6, "episode_n:"+str(episode), fontsize=10)
 
+		"""
 		for i in range(len(tasklist)):
 			if i==0:
 				self.ax3.text(-13, 53, "task to assign", fontsize=10)
@@ -216,6 +217,7 @@ class MapMake():
 			if len(assigned_task[i])>0:
 				self.ax3.text(50, 50-3*pos, str(assigned_task[i]), fontsize=10)
 				pos=pos+1
+		"""
 
 		self.draw_weighted_graph(self.G, self.pos)
 		plt.grid() #グリッド

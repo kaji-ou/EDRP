@@ -7,6 +7,7 @@ import os
 
 from drp_env.state_repre import REGISTRY
 from drp_env.EE_map import MapMake
+from drp_env.gui_task import GUI_tasklist
 from simple_manager import TaskManager
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ''))
@@ -77,6 +78,8 @@ class DrpEnv(gym.Env):
 		self.is_tasklist = True
 		self.current_tasklist=[]
 		self.assigned_tasks=[]
+		if self.is_tasklist:
+			self.taskgui=GUI_tasklist()
 
 	def get_obs(self):
 		return self.obs
@@ -269,7 +272,7 @@ class DrpEnv(gym.Env):
 
 		# process about tasklist
 		if self.is_tasklist:
-			# add tasks
+			# add tasks(now, add only one task by step)
 			for i in range(len(self.alltasks[self.step_account])):
 				new_task = self.alltasks[self.step_account-1][i]
 				self.current_tasklist.append(new_task)
@@ -394,6 +397,12 @@ class DrpEnv(gym.Env):
 			self.current_tasklist,
 			self.assigned_tasks,
 		) # a must be a angle !!!list!!!
+
+		if self.is_tasklist:
+			self.taskgui.show_tasklist(
+				self.agent_num, 
+				self.assigned_tasks, 
+				self.current_tasklist)
 		
 
 	def close(self):
