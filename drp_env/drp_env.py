@@ -307,11 +307,10 @@ class DrpEnv(gym.Env):
 						self.obs_onehot[i][int(self.goal_array[i])+len(list(self.G.nodes()))] = 1
 
 			#print(self.alltasks)
+			print("current_tasklist")
 			print(self.current_tasklist)
+			print("assigned_tasks")
 			print(self.assigned_tasks)
-			print(self.start_ori_array)
-			print(self.goal_array)
-			print(self.obs)
 
 		obs = self.obs_manager.calc_obs()
 
