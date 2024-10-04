@@ -230,6 +230,8 @@ class DrpEnv(gym.Env):
 			"distance_from_start": None,
 			"step": self.step_account,
 			"wait": self.wait_count,
+			"goal_account": self.reach_account,
+			"1agent_goal_account": self.reach_account/self.agent_num
 		}
 		# happen
 		if collision_flag==1:#collision
