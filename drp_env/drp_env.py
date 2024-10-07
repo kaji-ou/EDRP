@@ -275,7 +275,7 @@ class DrpEnv(gym.Env):
 		# process about tasklist
 		if self.is_tasklist:
 			# add tasks(now, add only one task by step)
-			for i in range(len(self.alltasks[self.step_account])):
+			for i in range(len(self.alltasks[self.step_account-1])):
 				new_task = self.alltasks[self.step_account-1][i]
 				self.current_tasklist.append(new_task)
 			# exclude the task from the list if it has been completed
