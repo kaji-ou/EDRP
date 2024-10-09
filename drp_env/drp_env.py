@@ -90,6 +90,8 @@ class DrpEnv(gym.Env):
 	def _get_avail_agent_actions(self, agent_id, n_actions):
 		avail_actions = self.ee_env.get_avail_action_fun(self.obs[agent_id], self.current_start[agent_id], self.current_goal[agent_id], self.goal_array[agent_id])
 		avail_actions_one_hot = np.zeros(n_actions)
+		if avail_actions[0] == None:
+			avail_actions[0] = 0
 		avail_actions_one_hot[avail_actions] = 1
 		return avail_actions_one_hot, avail_actions
 	
