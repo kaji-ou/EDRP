@@ -295,7 +295,7 @@ class MapMake():
 			tasklist.append(tasklist_by_step)
 			#Add one task per step as an initial implementation
 
-		print(tasklist)
+		#print(tasklist)
 		return tasklist
 
 """
