@@ -113,7 +113,7 @@ class DrpEnv(gym.Env):
 
 		#initialize task list
 		if self.is_tasklist:
-			self.goal_array = self.start_ori_array
+			self.goal_array = copy.deepcopy(self.start_ori_array)
 			self.current_tasklist=[]
 			self.assigned_tasks=[] #self.assigned_tasks[i] is a task assigned to agent i
 			for i in range(self.agent_num):
@@ -309,10 +309,10 @@ class DrpEnv(gym.Env):
 						self.obs_onehot[i][int(self.goal_array[i])+len(list(self.G.nodes()))] = 1
 
 			#print(self.alltasks)
-			print("current_tasklist")
-			print(self.current_tasklist)
-			print("assigned_tasks")
-			print(self.assigned_tasks)
+			#print("current_tasklist")
+			#print(self.current_tasklist)
+			#print("assigned_tasks")
+			#print(self.assigned_tasks)
 
 		obs = self.obs_manager.calc_obs()
 
