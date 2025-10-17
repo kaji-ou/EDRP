@@ -8,7 +8,6 @@ import os
 from drp_env.state_repre import REGISTRY
 from drp_env.EE_map import MapMake
 from drp_env.gui_task import GUI_tasklist
-from simple_manager import TaskManager
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ''))
 
@@ -24,6 +23,7 @@ class DrpEnv(gym.Env):
 			collision,
 			map_name="map_3x3",
 			reward_list={"goal": 100, "collision": -10, "wait": -10, "move": -1},
+			task_flag=False
 		  ):
 		self.agent_num = agent_num
 		self.n_agents = agent_num # for epymarl
@@ -50,6 +50,9 @@ class DrpEnv(gym.Env):
 		self.flag_indicate = 0
 		self.episode_account = 0
 
+		# for tasklist
+		self.task_completion = 0
+
 		self.distance_from_start = np.zeros(self.agent_num)
 
 		# create ee_env and pass self.variable
@@ -75,9 +78,12 @@ class DrpEnv(gym.Env):
 		self.log = {}
 
 		# flag for tasklist
-		self.is_tasklist = True
+		self.is_tasklist = task_flag
 		self.current_tasklist=[]
-		self.assigned_tasks=[]
+		self.assigned_tasks=[]#エージェントが割り当てられたタスク(未ピックを含む)
+		self.assigned_list=[]#未実行のタスクとエージェントの割り当て表
+		self.task_num = self.agent_num*2 # for tasklist, each agent can have 2 tasks at most
+		#for rendering
 		if self.is_tasklist:
 			self.taskgui=GUI_tasklist()
 
@@ -102,28 +108,26 @@ class DrpEnv(gym.Env):
 		# if goal and start are not assigned, randomly generate every episode    
 		self.start_ori_array = copy.deepcopy(self.ee_env.input_start_ori_array)
 		self.goal_array = copy.deepcopy(self.ee_env.input_goal_array)
-		print("self.start_ori_array", self.start_ori_array)
+		#print("self.start_ori_array", self.start_ori_array)
 		if self.start_ori_array == []:
 			self.ee_env.random_start()
 			self.start_ori_array = self.ee_env.start_ori_array
 		if self.goal_array == []:
 			self.ee_env.random_goal()
 			self.goal_array = self.ee_env.goal_array
-		print("self.start_ori_array after", self.start_ori_array)
+		#print("self.start_ori_array after", self.start_ori_array)
 
 		#initialize task list
 		if self.is_tasklist:
 			self.goal_array = copy.deepcopy(self.start_ori_array)
 			self.current_tasklist=[]
-			self.assigned_tasks=[] #self.assigned_tasks[i] is a task assigned to agent i
-			for i in range(self.agent_num):
-				self.assigned_tasks.append([])
+			#self.assigned_tasks[i] is a task assigned to agent i
+			self.assigned_tasks=[[] for _ in range(self.agent_num)] 
 			self.alltasks = self.ee_env.create_tasklist(self.time_limit, self.agent_num, 1)
 
 		#initialize obs
 		self.obs = tuple(np.array([self.pos[self.start_ori_array[i]][0], self.pos[self.start_ori_array[i]][1], self.start_ori_array[i], self.goal_array[i]]) for i in range(self.agent_num))
 		self.obs_current_chache = copy.deepcopy(self.obs)# used for calculating reward
-		
 		#initialize obs_one-hot
 		self.obs_onehot = np.zeros((self.agent_num, self.n_nodes*2))
 		for i in range(self.agent_num):
@@ -141,7 +145,10 @@ class DrpEnv(gym.Env):
 		self.reach_account = 0
 		self.step_account = 0
 		self.episode_account += 1
-		print('Environment reset obs: \n', self.obs)
+
+		# for tasklist
+		self.task_completion = 0
+		#print('Environment reset obs: \n', self.obs)
 
 		obs = self.obs_manager.calc_obs()
 
@@ -149,6 +156,11 @@ class DrpEnv(gym.Env):
 		
 
 	def step(self, joint_action):
+
+		if isinstance(joint_action, dict):
+			task_assign = joint_action.get("task", None)
+			joint_action = joint_action.get("pass", joint_action)
+
 		#transite env based on joint_action
 		self.step_account += 1
 		self.obs_current_chache = copy.deepcopy(self.obs)
@@ -174,6 +186,8 @@ class DrpEnv(gym.Env):
 			elif self.pos[int(action_i)][0]==self.obs[i][0] and self.pos[int(action_i)][1]==self.obs[i][1]:
 				self.obs_prepare.append(self.obs_current_chache[i])
 				self.wait_count[i] += 1
+				#pbsのため，その場待機でもcurrent_goalをNoneのままでないように変更
+				self.current_goal_prepare[i] = action_i
 			# if available ⇢ obs_prepare update by obs_i_
 			else:
 				#self.joint_action_old[i] = joint_action[i]
@@ -233,7 +247,8 @@ class DrpEnv(gym.Env):
 			"step": self.step_account,
 			"wait": self.wait_count,
 			"goal_account": self.reach_account,
-			"1agent_goal_account": self.reach_account/self.agent_num
+			"1agent_goal_account": self.reach_account/self.agent_num,
+			"task_completion": self.task_completion,
 		}
 		# happen
 		if collision_flag==1:#collision
@@ -264,8 +279,7 @@ class DrpEnv(gym.Env):
 				ri_array.append(ri)
 			
 			if self.terminated == [True for _ in range(self.agent_num)]: # all reach goal
-				print("!!!all reach goal!!!")
-				self.reach_account = 0
+				#print("!!!all reach goal!!!")
 				# info
 				info["goal"] = True
 			
@@ -274,51 +288,66 @@ class DrpEnv(gym.Env):
 
 			#obs = self.obs_manager.calc_obs()
 
-		# process about tasklist
 		if self.is_tasklist:
 			# add tasks(now, add only one task by step)
 			for i in range(len(self.alltasks[self.step_account-1])):
+				#if len(self.current_tasklist) < self.task_num:
 				new_task = self.alltasks[self.step_account-1][i]
 				self.current_tasklist.append(new_task)
-			# exclude the task from the list if it has been completed
+				self.assigned_list.append(-1) # -1 means unassigned
+
+			# remove the task from the list if it has been completed
 			for i in range(self.agent_num):
 				pos_agenti = [self.obs[i][0],self.obs[i][1]]
 				if len(self.assigned_tasks[i])>0:
 					if str(pos_agenti)==str(self.pos[self.goal_array[i]]):
 						if self.goal_array[i] == self.assigned_tasks[i][1]:
-							self.assigned_tasks[i] = []
+							self.assigned_tasks[i] = [] # remove the task from assigned_tasks
+							self.task_completion += 1
 						
-			self.current_tasklist, self.assigned_tasks = TaskManager.assign_task(self.agent_num, self.current_tasklist, self.assigned_tasks)
+			# assign tasks to agents
+			for i in range(self.agent_num):
+				if (self.assigned_tasks[i] == [] or i in self.assigned_list) and task_assign[i] != -1:
+					self.assigned_tasks[i] = self.current_tasklist[task_assign[i]]
+					self.goal_array[i] = self.assigned_tasks[i][0] # update goal to pick node
+					self.assigned_list[task_assign[i]] = i # update assigned_list
 
 			# update agent's start and goal
 			for i in range(self.agent_num):
 				pos_agenti = [self.obs[i][0],self.obs[i][1]]
 				if len(self.assigned_tasks[i])>0:
 					if str(pos_agenti)==str(self.pos[self.goal_array[i]]):
+						#when agent i reach the pick node
 						if self.goal_array[i]==self.assigned_tasks[i][0]:
 							self.start_ori_array[i] = self.goal_array[i]
 							self.goal_array[i] = self.assigned_tasks[i][1]
-						else:
+							try:
+								idx = self.assigned_list.index(i)
+								self.current_tasklist.pop(idx)
+								self.assigned_list.pop(idx)
+							except ValueError:
+								print("ValueError: agent ", i, " 's assigned task is not in the current_tasklist")
+						#when agent i reach the drop node
+						elif self.goal_array[i]==self.assigned_tasks[i][1]:
 							self.start_ori_array[i] = self.goal_array[i]
-							self.goal_array[i] = self.assigned_tasks[i][0]
+							#self.goal_array[i] = self.assigned_tasks[i][0]
+						else:
+							print(self.goal_array[i], self.assigned_tasks[i])
+							raise ValueError("Error in task execution")
+						
+				self.obs_prepare[i] = [self.obs[i][0], self.obs[i][1], self.start_ori_array[i], self.goal_array[i]]
+				self.obs_onehot[i] = np.zeros((1, len(list(self.G.nodes()))*2))
+				self.obs_onehot[i][int(self.start_ori_array[i])] = 1
+				self.obs_onehot[i][int(self.goal_array[i])+len(list(self.G.nodes()))] = 1
 
-						self.obs_prepare[i] = [self.obs[i][0], self.obs[i][1], self.start_ori_array[i], self.goal_array[i]]
-						self.obs = tuple([np.array(i) for i in self.obs_prepare])
-						self.obs_onehot[i] = np.zeros((1, len(list(self.G.nodes()))*2))
-						self.obs_onehot[i][int(self.start_ori_array[i])] = 1
-						self.obs_onehot[i][int(self.goal_array[i])+len(list(self.G.nodes()))] = 1
-
-			#print(self.alltasks)
-			#print("current_tasklist")
-			#print(self.current_tasklist)
-			#print("assigned_tasks")
-			#print(self.assigned_tasks)
+			self.obs = tuple([np.array(i) for i in self.obs_prepare])
 
 		obs = self.obs_manager.calc_obs()
+		print(self.goal_array, self.obs[0][3],self.obs[1][3])
 
 		# Check whether time is over
 		if self.step_account >= self.time_limit:
-			print("!!!time up!!!")
+			#print("!!!time up!!!")
 			info["timeup"]= True
 			self.terminated = [True for _ in range(self.agent_num)]
 
@@ -362,7 +391,7 @@ class DrpEnv(gym.Env):
 						r_i = self.r_goal
 						self.reach_account += 1
 					else: # stop at goal
-						r_i = 0   
+						r_i = 0
 						# self.distance_from_start[i] -= self.speed
 			
 				else: #at a general node 
@@ -405,7 +434,9 @@ class DrpEnv(gym.Env):
 			self.taskgui.show_tasklist(
 				self.agent_num, 
 				self.assigned_tasks, 
-				self.current_tasklist)
+				self.current_tasklist,
+				self.assigned_list
+				)
 		
 
 	def close(self):
@@ -430,3 +461,18 @@ class DrpEnv(gym.Env):
 			pos_list.append(pos)
 
 		return pos_list
+
+	def get_path_length(self, start, goal):
+		if start == goal:
+			return 0
+		else:
+			return self.ee_env.get_path_length(start, goal)
+
+	def set_1agent_info(self, pos, current_start, current_goal, goal_array):
+		self.obs = tuple(np.array([pos[0], pos[1], self.obs[0][2], self.obs[0][3]]) for _ in range(1))
+		self.current_start[0] = current_start
+		self.current_goal[0] = current_goal
+		self.goal_array[0] = goal_array
+		self.step_account = 0
+
+		return

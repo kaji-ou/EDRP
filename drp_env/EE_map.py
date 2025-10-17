@@ -45,7 +45,7 @@ class MapMake():
 		else:
 			print('Mal Environment initialized')
 
-		print('Agent numbers', self.agent_num)
+		#print('Agent numbers', self.agent_num)
 
     # assignd by user
 		self.input_start_ori_array = copy.deepcopy(start_ori_array)
@@ -61,8 +61,8 @@ class MapMake():
 		
 		self.base_nodes = base_nodes
 
-		print('Start node for each agent', self.start_ori_array)
-		print('Goal node for each agent', self.goal_array)
+		#print('Start node for each agent', self.start_ori_array)
+		#print('Goal node for each agent', self.goal_array)
 
 		#self.start1_ori,self.goal1=0,5
 		#self.start2_ori,self.goal2=3,4
@@ -227,6 +227,7 @@ class MapMake():
 		plt.cla() #clear axis not plt
 
 	def get_avail_action_fun(self, obs_i, current_start, current_goal, goal_i):
+
 		#if s==self.pos[goal_i] and goal_i==0:
 		if [obs_i[0],obs_i[1]]==self.pos[goal_i]:
 			#return ['null']
@@ -280,7 +281,7 @@ class MapMake():
 		start_node = np.random.choice(G_nodes_copy)
 		G_nodes_copy.remove(start_node)
 		goal_node = np.random.choice(G_nodes_copy)
-		deadline = timelimit+1 #later
+		deadline = timelimit+1 #未実装
 		return [start_node, goal_node, deadline]
 
 	# create all tasklist
@@ -297,6 +298,16 @@ class MapMake():
 
 		#print(tasklist)
 		return tasklist
+	
+	def get_path_length(self, start_node, goal_node):
+		path_length = 0
+		if nx.has_path(self.G, start_node, goal_node):
+			path_length = nx.shortest_path_length(self.G, source=start_node, target=goal_node, weight='weight')
+			#print("path_length", path_length)
+		else:
+			path_length = None
+					 
+		return path_length
 
 """
 if __name__ == '__main__':
