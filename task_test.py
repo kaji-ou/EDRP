@@ -4,10 +4,6 @@ import yaml
 import time
 from argparse import Namespace
 from policy.policy import policy
-#import sys
-#import os
-#sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..', 'main'))) 
-#from policy.policy import policy
 
 env=gym.make("drp_env:drp-2agent_map_3x3-v2", state_repre_flag = "onehot_fov", task_flag = True)
 
@@ -16,20 +12,10 @@ n_obs=env.reset()
 #print("observation_space", env.observation_space)
 
 #print("obs", env.start_ori_array, env.goal_array)
-#a=[[0,5],[0,5],[0,8],[1,8],[1,8],[1,8],[1,8],[2,7],[2,7],[2,7],[2,7],[2,7],[2,7],[2,7]]
 
-#t=[[-1,-1],[-1,0],[1,-1],[-1,-1],[-1,-1],[-1,-1],[-1,-1],[-1,-1],[-1,-1],[-1,-1],[-1,-1],[-1,1],[-1,-1],[-1,-1]]
-
-env.render()
-#time.sleep(20)
 for i in range(50):
-    env.render()
-    #input()
-    #time.sleep(1)
-    #actions=a[i]
-    #task=t[i]
-    #actions=tuple(map(int, input().split()))
-    #task = tuple(map(int, input().split()))
+    #env.render()
+
     actions, task = policy(n_obs, env)
     joint_action = {"pass": actions, "task": task}
     n_obs, reward, done, info = env.step(joint_action)
