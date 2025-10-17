@@ -281,7 +281,7 @@ class MapMake():
 		start_node = np.random.choice(G_nodes_copy)
 		G_nodes_copy.remove(start_node)
 		goal_node = np.random.choice(G_nodes_copy)
-		deadline = timelimit+1 #未実装
+		deadline = timelimit+1 #未使用
 		return [start_node, goal_node, deadline]
 
 	# create all tasklist
@@ -297,6 +297,7 @@ class MapMake():
 			#Add one task per step as an initial implementation
 
 		#print(tasklist)
+		tasklist = [[[8,7]],[[1,2]],[],[],[[3,4]],[],[[6,1]],[],[],[],[],[],[],[]]
 		return tasklist
 	
 	def get_path_length(self, start_node, goal_node):

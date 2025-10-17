@@ -1,6 +1,7 @@
 import gym
 import numpy as np
 import yaml
+import time
 from argparse import Namespace
 from policy.policy import policy
 #import sys
@@ -15,11 +16,18 @@ n_obs=env.reset()
 #print("observation_space", env.observation_space)
 
 #print("obs", env.start_ori_array, env.goal_array)
+#a=[[0,5],[0,5],[0,8],[1,8],[1,8],[1,8],[1,8],[2,7],[2,7],[2,7],[2,7],[2,7],[2,7],[2,7]]
 
-for _ in range(50):
+#t=[[-1,-1],[-1,0],[1,-1],[-1,-1],[-1,-1],[-1,-1],[-1,-1],[-1,-1],[-1,-1],[-1,-1],[-1,-1],[-1,1],[-1,-1],[-1,-1]]
+
+env.render()
+#time.sleep(20)
+for i in range(50):
     env.render()
-    input()
-
+    #input()
+    #time.sleep(1)
+    #actions=a[i]
+    #task=t[i]
     #actions=tuple(map(int, input().split()))
     #task = tuple(map(int, input().split()))
     actions, task = policy(n_obs, env)

@@ -84,8 +84,8 @@ class DrpEnv(gym.Env):
 		self.assigned_list=[]#未実行のタスクとエージェントの割り当て表
 		self.task_num = self.agent_num*2 # for tasklist, each agent can have 2 tasks at most
 		#for rendering
-		if self.is_tasklist:
-			self.taskgui=GUI_tasklist()
+		#if self.is_tasklist:
+		#	self.taskgui=GUI_tasklist()
 
 	def get_obs(self):
 		return self.obs
@@ -111,7 +111,8 @@ class DrpEnv(gym.Env):
 		#print("self.start_ori_array", self.start_ori_array)
 		if self.start_ori_array == []:
 			self.ee_env.random_start()
-			self.start_ori_array = self.ee_env.start_ori_array
+			#self.start_ori_array = self.ee_env.start_ori_array
+			self.start_ori_array = [0,5] # for test
 		if self.goal_array == []:
 			self.ee_env.random_goal()
 			self.goal_array = self.ee_env.goal_array
@@ -160,6 +161,10 @@ class DrpEnv(gym.Env):
 		if isinstance(joint_action, dict):
 			task_assign = joint_action.get("task", None)
 			joint_action = joint_action.get("pass", joint_action)
+
+			filtered = [x for x in task_assign if x != -1]
+			if len(filtered) != len(set(filtered)):
+				raise ValueError("Error: Multiple agents assigned to the same task.")
 
 		#transite env based on joint_action
 		self.step_account += 1
@@ -310,6 +315,9 @@ class DrpEnv(gym.Env):
 				if (self.assigned_tasks[i] == [] or i in self.assigned_list) and task_assign[i] != -1:
 					self.assigned_tasks[i] = self.current_tasklist[task_assign[i]]
 					self.goal_array[i] = self.assigned_tasks[i][0] # update goal to pick node
+					if self.assigned_list[task_assign[i]] != -1:
+						agj = self.assigned_list[task_assign[i]]
+						
 					self.assigned_list[task_assign[i]] = i # update assigned_list
 
 			# update agent's start and goal
