@@ -111,8 +111,7 @@ class DrpEnv(gym.Env):
 		#print("self.start_ori_array", self.start_ori_array)
 		if self.start_ori_array == []:
 			self.ee_env.random_start()
-			#self.start_ori_array = self.ee_env.start_ori_array
-			self.start_ori_array = [0,5] # for test
+			self.start_ori_array = self.ee_env.start_ori_array
 		if self.goal_array == []:
 			self.ee_env.random_goal()
 			self.goal_array = self.ee_env.goal_array

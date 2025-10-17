@@ -297,7 +297,6 @@ class MapMake():
 			#Add one task per step as an initial implementation
 
 		#print(tasklist)
-		tasklist = [[[8,7]],[[1,2]],[],[],[[3,4]],[],[[6,1]],[],[],[],[],[],[],[]]
 		return tasklist
 	
 	def get_path_length(self, start_node, goal_node):
