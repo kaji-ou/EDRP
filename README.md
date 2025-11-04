@@ -1,20 +1,30 @@
 ## To use GUI for task
 
-Enable the following in init()
+もしrender()を使わないときに，邪魔なものがでるなら以下を無効にしてください．
 ```
 if self.is_tasklist:
 	self.taskgui=GUI_tasklist()
 ```
 
-- 実行は`task_test.py`を参照
+## 実行手順
+```
+git clone https://github.com/kaji-ou/EDRP.git
+pip install -e ./EDRP
+pip install -r ./EDRP/requirements.txt
+```
+
+- `task_test.py`を実行
 
 ```
-actions, task = policy(n_obs, env)
-joint_action = {"pass": actions, "task": task}
-n_obs, reward, done, info = env.step(joint_action)
+env = gym.make(...)
+env.reset()
+for i in range(50):
+	actions, task = policy(n_obs, env)
+	joint_action = {"pass": actions, "task": task}
+	n_obs, reward, done, info = env.step(joint_action)
 ```
 
-- `"pass"`は従来のdrpの入力と同じ
+- `"pass"`は従来のdrp環境への入力と同じ
 - `"task"`はエージェントへのタスクの割り当てを表し，サイズはエージェント数のリストとする．
 	- 割り当てはタスクリスト`env.current_tasklist`の何番目のタスクかを表す（0~）
 	- 割り当てを行わない場合は`-1`とする（例：エージェント数4，`task = [-1,0,1,-1]`）

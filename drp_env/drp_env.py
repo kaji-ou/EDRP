@@ -84,6 +84,7 @@ class DrpEnv(gym.Env):
 		self.assigned_list=[]#未実行のタスクとエージェントの割り当て表
 		self.task_num = self.agent_num*2 # for tasklist, each agent can have 2 tasks at most
 		#for rendering
+		self.task_gui = None
 		#if self.is_tasklist:
 		#	self.taskgui=GUI_tasklist()
 
@@ -310,14 +311,23 @@ class DrpEnv(gym.Env):
 							self.task_completion += 1
 						
 			# assign tasks to agents
-			for i in range(self.agent_num):
-				if (self.assigned_tasks[i] == [] or i in self.assigned_list) and task_assign[i] != -1:
-					self.assigned_tasks[i] = self.current_tasklist[task_assign[i]]
-					self.goal_array[i] = self.assigned_tasks[i][0] # update goal to pick node
-					if self.assigned_list[task_assign[i]] != -1:
+			assign_loop = True
+			while assign_loop:
+				assign_loop = False
+
+				for i in range(self.agent_num):
+					if (self.assigned_tasks[i] == [] or i in self.assigned_list) and task_assign[i] != -1:
+						self.assigned_tasks[i] = self.current_tasklist[task_assign[i]]
+						self.goal_array[i] = self.assigned_tasks[i][0] # update goal to pick node
+						#when agent loss task, and not assigned new task
 						agj = self.assigned_list[task_assign[i]]
+						if agj != -1 and task_assign[agj] == -1:
+							print(agj)
+							self.assigned_tasks[agj] = []
+							self.goal_array[agj] = self.current_goal[agj]
+							assign_loop = True
 						
-					self.assigned_list[task_assign[i]] = i # update assigned_list
+						self.assigned_list[task_assign[i]] = i # update assigned_list
 
 			# update agent's start and goal
 			for i in range(self.agent_num):
@@ -350,7 +360,6 @@ class DrpEnv(gym.Env):
 			self.obs = tuple([np.array(i) for i in self.obs_prepare])
 
 		obs = self.obs_manager.calc_obs()
-		print(self.goal_array, self.obs[0][3],self.obs[1][3])
 
 		# Check whether time is over
 		if self.step_account >= self.time_limit:
@@ -437,7 +446,7 @@ class DrpEnv(gym.Env):
 			self.assigned_tasks,
 		) # a must be a angle !!!list!!!
 
-		if self.is_tasklist:
+		if self.is_tasklist and self.task_gui is not None:
 			self.taskgui.show_tasklist(
 				self.agent_num, 
 				self.assigned_tasks, 
