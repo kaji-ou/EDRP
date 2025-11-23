@@ -354,7 +354,7 @@ class DrpEnv(gym.Env):
 						
 				self.obs_prepare[i] = [self.obs[i][0], self.obs[i][1], self.start_ori_array[i], self.goal_array[i]]
 				self.obs_onehot[i] = np.zeros((1, len(list(self.G.nodes()))*2))
-				self.obs_onehot[i][int(self.start_ori_array[i])] = 1
+				self.obs_onehot[i][int(self.current_start[i])] = 1
 				self.obs_onehot[i][int(self.goal_array[i])+len(list(self.G.nodes()))] = 1
 
 			self.obs = tuple([np.array(i) for i in self.obs_prepare])
